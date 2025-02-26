@@ -19,78 +19,158 @@ def parse_fasta(filepath):
             if not line:
                 continue
             if line.startswith('>'):
-                # If we already have a sequence buffered, append it
                 if name:
                     sequences.append((name, "".join(seq_lines)))
                 name = line[1:]  # remove '>'
                 seq_lines = []
             else:
                 seq_lines.append(line)
-        # Append the last sequence if it exists
         if name:
             sequences.append((name, "".join(seq_lines)))
-
     return sequences
 
-def highlight_alignment(sequences, chunk_size=60, high_thresh=0.90, low_thresh=0.50):
+def highlight_columns(seq_chars, high_thresh=0.90, low_thresh=0.50):
     """
-    Takes aligned sequences (list of (name, seq)) and:
-      - For each column, finds the majority character frequency
-      - If freq >= high_thresh => wrap that char in <em class='high'>
-      - Else if freq >= low_thresh => wrap that char in <em class='low'>
-      - Else => no <em> (remains black)
-    Return an HTML string with line chunking for readability.
+    Given a list of sequences in 'list-of-chars' form (seq_chars),
+    apply "majority rule" color-coding:
+    - If a char appears in >= high_thresh of sequences => <em class='high'>
+    - If >= low_thresh => <em class='low'>
+    - Otherwise => black/unwrapped
+    - Skip coloring if the majority char is '-'
+    Modifies seq_chars in-place.
+    """
+    import collections
+
+    num_seqs = len(seq_chars)
+    if num_seqs == 0:
+        return
+
+    align_len = len(seq_chars[0])
+    # Verify all sequences have same length
+    for row in seq_chars:
+        if len(row) != align_len:
+            return  # inconsistent length, do nothing
+
+    # For each column, find majority residue and color
+    for col_idx in range(align_len):
+        col_residues = [seq_chars[row_idx][col_idx] for row_idx in range(num_seqs)]
+        counter = collections.Counter(col_residues)
+        most_common_char, most_common_count = counter.most_common(1)[0]
+        freq = most_common_count / num_seqs
+
+        if most_common_char == '-':
+            continue  # skip if the majority is a gap
+        if freq >= high_thresh:
+            # highlight with <em class='high'>
+            for row_idx in range(num_seqs):
+                if seq_chars[row_idx][col_idx] == most_common_char:
+                    seq_chars[row_idx][col_idx] = f"<em class='high'>{most_common_char}</em>"
+        elif freq >= low_thresh:
+            # highlight with <em class='low'>
+            for row_idx in range(num_seqs):
+                if seq_chars[row_idx][col_idx] == most_common_char:
+                    seq_chars[row_idx][col_idx] = f"<em class='low'>{most_common_char}</em>"
+
+def mode1_labels_stacked(sequences, chunk_size=60):
+    """
+    Mode 1: Show "Positions X–Y" before each 60-char chunk,
+    and stack sequences below that label.
+    """
+    if not sequences:
+        return "<p>No alignment results available.</p>"
+
+    # Convert each sequence to list-of-chars
+    seq_chars = [list(seq) for _, seq in sequences]
+    # Color columns in-place
+    highlight_columns(seq_chars, high_thresh=0.90, low_thresh=0.50)
+
+    align_len = len(seq_chars[0])
+    num_seqs = len(seq_chars)
+
+    html_out = []
+    style_block = """
+<style>
+pre.seq  { color: black; background-color: white; }
+em.high  { color: red;   background-color: white; font-style: normal; }
+em.low   { color: blue;  background-color: white; font-style: normal; }
+</style>
+"""
+    html_out.append(style_block)
+    html_out.append("<pre class='seq'>")
+
+    for chunk_start in range(0, align_len, chunk_size):
+        chunk_end = min(chunk_start + chunk_size, align_len)
+        # Label
+        html_out.append(f"Positions {chunk_start+1}-{chunk_end}\n")
+        # Print sequences stacked
+        for i, (name, _) in enumerate(sequences):
+            # sequence name
+            html_out.append(f"{name}\n")
+            # chunk slice
+            chunk_slice = "".join(seq_chars[i][chunk_start:chunk_end])
+            html_out.append(chunk_slice + "\n")
+        html_out.append("\n")  # extra spacing
+
+    html_out.append("</pre>")
+    return "".join(html_out)
+
+def mode2_no_labels_no_names(sequences, chunk_size=60):
+    """
+    Mode 2: No "Positions X–Y" labels,
+    No sequence names,
+    but still chunk at 60 columns and stack sequences together.
+    """
+    if not sequences:
+        return "<p>No alignment results available.</p>"
+
+    seq_chars = [list(seq) for _, seq in sequences]
+    highlight_columns(seq_chars, high_thresh=0.90, low_thresh=0.50)
+
+    align_len = len(seq_chars[0])
+    num_seqs = len(seq_chars)
+
+    html_out = []
+    style_block = """
+<style>
+pre.seq  { color: black; background-color: white; }
+em.high  { color: red;   background-color: white; font-style: normal; }
+em.low   { color: blue;  background-color: white; font-style: normal; }
+</style>
+"""
+    html_out.append(style_block)
+    html_out.append("<pre class='seq'>")
+
+    for chunk_start in range(0, align_len, chunk_size):
+        chunk_end = min(chunk_start + chunk_size, align_len)
+        # No label
+        for i in range(num_seqs):
+            chunk_slice = "".join(seq_chars[i][chunk_start:chunk_end])
+            html_out.append(chunk_slice + "\n")
+        html_out.append("\n")
+
+    html_out.append("</pre>")
+    return "".join(html_out)
+
+def mode3_full_snippet(sequences, chunk_size=60):
+    """
+    Mode 3: The "snippet style" you provided:
+      - One entire sequence at a time
+      - Print sequence name
+      - Break that sequence at 60 chars
+      - Blank line between sequences
+      - Column-based color-coding (≥90% => red, ≥50% => blue)
     """
 
     if not sequences:
         return "<p>No alignment results available.</p>"
 
-    num_seqs = len(sequences)
-    align_len = len(sequences[0][1])
-    # Verify all sequences have the same length
-    for name, seq in sequences:
-        if len(seq) != align_len:
-            return "<p>Error: Inconsistent alignment lengths!</p>"
-
-    # We'll build a 2D array of "HTML-coded characters",
-    # so we can fill them column by column.
-    # Start by converting each sequence's string into a list of characters:
+    # Convert each sequence to list-of-chars so we can color columns
     seq_chars = [list(seq) for _, seq in sequences]
+    highlight_columns(seq_chars, high_thresh=0.90, low_thresh=0.50)
 
-    # For each column, figure out which character is the majority
-    for col_idx in range(align_len):
-        # Count frequency of each character in this column
-        col = [seq_chars[row_idx][col_idx] for row_idx in range(num_seqs)]
-        freq_counter = collections.Counter(col)
-        # Most common character and its count
-        most_common_char, most_common_count = freq_counter.most_common(1)[0]
-        freq = most_common_count / num_seqs  # fraction of sequences that share this char
+    align_len = len(seq_chars[0])
 
-        # Decide if we do <em class='high'> or <em class='low'>
-        if freq >= high_thresh and most_common_char != '-':
-            # "High" consensus => red
-            # We only wrap the matching characters
-            for row_idx in range(num_seqs):
-                if seq_chars[row_idx][col_idx] == most_common_char:
-                    seq_chars[row_idx][col_idx] = f"<em class='high'>{most_common_char}</em>"
-                else:
-                    # If a different char or gap, just leave it unwrapped
-                    pass
-
-        elif freq >= low_thresh and most_common_char != '-':
-            # "Low" consensus => blue
-            for row_idx in range(num_seqs):
-                if seq_chars[row_idx][col_idx] == most_common_char:
-                    seq_chars[row_idx][col_idx] = f"<em class='low'>{most_common_char}</em>"
-                # else remain unwrapped
-
-        else:
-            # No highlight => remain black text or gap
-            pass
-
-    # Build final HTML lines with chunking
     html_out = []
-    # Add the style block at top, so we replicate the MultiAlin color style
     style_block = """
 <style type='text/css'>
 pre.seq  { color: black; background-color: white; }
@@ -101,14 +181,14 @@ em.low   { color: blue;  background-color: white; font-style: normal; }
     html_out.append(style_block)
     html_out.append("<pre class='seq'>")
 
-    # Now chunk each sequence line by chunk_size
-    for i, (name, original_seq) in enumerate(sequences):
-        html_out.append(f"{name}\n")  # Print the sequence name on its own line
+    # Print sequences "one entire sequence at a time" with chunking
+    for i, (name, _) in enumerate(sequences):
+        html_out.append(f"{name}\n")  # sequence name
 
-        # Because we replaced certain chars with <em>..</em>, we need to re-join
-        # the modified characters in seq_chars[i].
+        # Re-join the color-coded characters
         modded_seq = seq_chars[i]
 
+        # Break into lines of chunk_size
         for chunk_start in range(0, align_len, chunk_size):
             chunk_end = min(chunk_start + chunk_size, align_len)
             chunk_slice = "".join(modded_seq[chunk_start:chunk_end])
@@ -119,11 +199,9 @@ em.low   { color: blue;  background-color: white; font-style: normal; }
     html_out.append("</pre>")
     return "".join(html_out)
 
-
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        # 1) Get sequences from the form
         raw_sequences = request.form.get('sequences', '').strip()
         if not raw_sequences:
             return """
@@ -133,11 +211,9 @@ def index():
             </body></html>
             """
 
-        # 2) Write them to a temporary FASTA file
+        # Run Clustal Omega
         with open('temp_input.fasta', 'w') as f:
             f.write(raw_sequences)
-
-        # 3) Run Clustal Omega to align (FASTA output)
         subprocess.run([
             'clustalo',
             '-i', 'temp_input.fasta',
@@ -146,7 +222,6 @@ def index():
             '--outfmt', 'fa'
         ])
 
-        # 4) Parse the aligned sequences
         aligned_seqs = parse_fasta('temp_output.aln')
         if not aligned_seqs:
             return """
@@ -156,34 +231,71 @@ def index():
             </body></html>
             """
 
-        # 5) Build color-coded alignment using MultiAlin-like thresholding
-        #    90% => red, 50% => blue, else black
-        html_alignment = highlight_alignment(aligned_seqs, chunk_size=60,
-                                             high_thresh=0.90, low_thresh=0.50)
+        # Build the 3 different HTML displays
+        html_mode1 = mode1_labels_stacked(aligned_seqs, chunk_size=60)
+        html_mode2 = mode2_no_labels_no_names(aligned_seqs, chunk_size=60)
+        html_mode3 = mode3_full_snippet(aligned_seqs, chunk_size=60)
 
-        # 6) Return the entire HTML page
-        return f"""
+        # Provide a dropdown to switch among them
+        final_html = f"""
         <html>
-        <head><title>MultiAlin-Style Alignment</title></head>
+        <head>
+          <title>Three Alignment Views</title>
+          <script>
+          function switchView() {{
+            var sel = document.getElementById('viewSelect').value;
+            var allViews = ['mode1','mode2','mode3'];
+            for(var i=0; i<allViews.length; i++) {{
+              document.getElementById(allViews[i]).style.display = 'none';
+            }}
+            document.getElementById(sel).style.display = '';
+          }}
+          </script>
+        </head>
         <body>
-          <h1>MultiAlin-Style Alignment</h1>
-          {html_alignment}
+          <h1>Choose Alignment View</h1>
+          <p>Select a mode to see how the alignment is displayed:</p>
+
+          <select id="viewSelect" onchange="switchView()">
+            <option value="mode1">Mode 1: Labels + Stacked</option>
+            <option value="mode2">Mode 2: No Labels, No Names (Stacked)</option>
+            <option value="mode3">Mode 3: Snippet-Style (Name + Blank Lines)</option>
+          </select>
+
+          <hr>
+
+          <div id="mode1" style="display:;">
+            <h2>Mode 1: Labels + Stacked</h2>
+            {html_mode1}
+          </div>
+
+          <div id="mode2" style="display:none;">
+            <h2>Mode 2: No Labels, No Names (Stacked)</h2>
+            {html_mode2}
+          </div>
+
+          <div id="mode3" style="display:none;">
+            <h2>Mode 3: Snippet-Style (One Sequence at a Time)</h2>
+            {html_mode3}
+          </div>
+
           <a href="/">Go Back</a>
         </body>
         </html>
         """
+        return final_html
 
-    # If GET, show the input form
+    # If GET, show input form
     return """
     <html>
     <head><title>Align Sequences</title></head>
     <body>
-      <h1>Submit Sequences for MultiAlin-Style Alignment</h1>
+      <h1>Submit Sequences for Alignment</h1>
       <form method="POST">
         <textarea name="sequences" rows="10" cols="60"
                   placeholder="Paste FASTA sequences here"></textarea>
         <br><br>
-        <button type="submit">Align (MultiAlin-Style)</button>
+        <button type="submit">Align</button>
       </form>
     </body>
     </html>
