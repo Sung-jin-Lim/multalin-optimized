@@ -23,7 +23,7 @@ true
 absolute
 
 [OutputFormat]
-doc
+msf
 
 [OutputOrder]
 aligned
@@ -38,7 +38,7 @@ list
 Normal
 
 [LineSize]
-50
+60
 
 [GraduationStep]
 10
