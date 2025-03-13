@@ -21,7 +21,7 @@
                                                                           11   3   1   2   3
                                                                                8   1   2   3
                                                                                    8   5   3
-                                                                                       8   3
+                                                                                       8   3    
 																														 3
 
 12 2 = default gap penalty = 12 + 2 * gap_length
