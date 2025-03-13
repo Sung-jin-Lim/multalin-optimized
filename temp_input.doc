@@ -4,8 +4,8 @@ Published research using this software should cite
 Multiple sequence alignment with hierarchical clustering
 F. CORPET, 1988, Nucl. Acids Res., 16 (22), 10881-10890
 Symbol comparison table: blosum62
-Gap weight: 12
-Gap length weight: 2
+Gap weight: 5
+Gap length weight: 0
 Consensus levels: high=90% low=50%
 Consensus symbols:
  ! is anyone of IV
@@ -13,10 +13,10 @@ Consensus symbols:
  % is anyone of FY
  # is anyone of NDQEBZ
 
- MSF:    131    Check:   0         ..
- Name: CCPC50         Len:   131  Check: 8418  Weight:  1.00
- Name: CCRF2S         Len:   131  Check: 5703  Weight:  1.00
- Name: Consensus      Len:   131  Check: 1392  Weight:  0.00
+ MSF:    134    Check:   0         ..
+ Name: CCPC50         Len:   134  Check: 8007  Weight:  1.00
+ Name: CCRF2S         Len:   134  Check: 8325  Weight:  1.00
+ Name: Consensus      Len:   134  Check: 1208  Weight:  0.00
 
 //
 
@@ -26,12 +26,12 @@ Consensus symbols:
  Consensus  [Q#GD](aaa)[G](a)[K] (a)[FN](q)[C](qa)[CH](m) [I](qadd)[GT](d)[I](a) .(rna)[KTGPNL] [YGVVGR](kaas) [#](ad)[FK].[YGEG]
 
             61                                                            120
-    CCPC50  (IL)[E]V(A)E[K](N)PD [L]T[W]T[E](ADL)[IE] [YV]T[DP](K)PW[L]V K(M)[T](D)[D]K(G)[AK]T [KMTFKM]G[K](N)[Q] [AD]VV(A)F(L)[A](QN)
-    CCRF2S  MK[E](A)G(A)[K]G-- [L](A)[W](D)[E]EHF[VQ] [YV](Q)[DP]T(KF)[L](K) (E)Y[T]G[D](A)K[AK](G) [KMTFKL]-[K]K[E] [AD](AH)N(I)W[A]YL
- Consensus  (il)[E](aaa)[K](n).. [L](a)[W](d)[E](adl)[!#] [YV](q)[DP](kkf)[L](k) (em)[T](d)[D](ag)[AK](g) [KMTFK$].[K](n)[#] [AD](ahail)[A](qn)
+    CCPC50  (IL)[E]V(A)E[K](N)PD [L]T[W]T[E](ADL)[IE] [YV]T[DP](K)PW[L]V K(M)[T](D)[D]K(G)[AK]T [KMTFKM]G[K](N)[Q] [AD]---[V]V[AFL]
+    CCRF2S  MK[E](A)G(A)[K]G-- [L](A)[W](D)[E]EHF[VQ] [YV](Q)[DP]T(KF)[L](K) (E)Y[T]G[D](A)K[AK](G) [KMTFKL]-[K]K[E] [AD]AHN[I](W)[AYL]
+ Consensus  (il)[E](aaa)[K](n).. [L](a)[W](d)[E](adl)[!#] [YV](q)[DP](kkf)[L](k) (em)[T](d)[D](ag)[AK](g) [KMTFK$].[K](n)[#] [AD]...[!](w)[A%L]
 
-            121      131
-    CCPC50  SP(D)[A](G)G(D)GEA A
-    CCRF2S  (QQ)V[A]V(R)P     
- Consensus  (qqd)[A](grd)... .
+            121         134
+    CCPC50  (A)[Q](N)S(P)D(A)GGD GEAA
+    CCRF2S  Q[Q]V(A)V(R)P        
+ Consensus  (a)[Q](napra)... ....
 

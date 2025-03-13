@@ -21,11 +21,13 @@
                                                                           11   3   1   2   3
                                                                                8   1   2   3
                                                                                    8   5   3
-                                                                                       8   3    
-																														 3
+                                                                                       8   3
+                                                                                           3
+end_of_mat
+Gap=12
+Gap2=2
 
-12 2 = default gap penalty = 12 + 2 * gap_length
- !  I V
- $  L M
- %  F Y
- #  B D E N Q Z
+!  I V
+$  L M
+%  F Y
+#  B D E N Q Z
